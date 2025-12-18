@@ -244,13 +244,18 @@ with st.sidebar:
     
     st.markdown("---")
 
-    # Image uploader in sidebar
+    # Image uploader in sidebar - Multiple files
     st.markdown("### 📁 Upload ảnh để nhận diện")
-    uploaded_file = st.file_uploader("Kéo/thả ảnh ở đây hoặc chọn tệp", type=["png", "jpg", "jpeg"], accept_multiple_files=False)
-    if uploaded_file is not None:
-        st.session_state["uploaded_file"] = uploaded_file
-    elif "uploaded_file" not in st.session_state:
-        st.session_state["uploaded_file"] = None
+    uploaded_files = st.file_uploader(
+        "Kéo/thả ảnh ở đây hoặc chọn tệp", 
+        type=["png", "jpg", "jpeg"], 
+        accept_multiple_files=True,
+        help="Có thể chọn nhiều ảnh cùng lúc"
+    )
+    if uploaded_files:
+        st.session_state["uploaded_files"] = uploaded_files
+    elif "uploaded_files" not in st.session_state:
+        st.session_state["uploaded_files"] = []
 
 save_dir = "outputs"
 os.makedirs(save_dir, exist_ok=True)
@@ -365,32 +370,63 @@ if st.session_state["running"]:
 else:
     frame_placeholder.info("🛑 Webcam đã dừng. Nhấp vào '▶ Bắt đầu webcam' để bắt đầu.")
 
-# --- Process uploaded image when webcam not running ---
+# --- Process uploaded images when webcam not running ---
 
-# --- Block xử lý ảnh upload (dễ copy/sửa) ---
+# --- Block xử lý nhiều ảnh upload ---
 
-uploaded = st.session_state.get("uploaded_file", None)
-if uploaded and not st.session_state["running"]:
-    # Đọc file bytes chỉ 1 lần, lưu vào session_state để dùng lại
-    if "uploaded_bytes" not in st.session_state or st.session_state["uploaded_bytes"] is None:
-        st.session_state["uploaded_bytes"] = uploaded.read()
-    file_bytes = st.session_state["uploaded_bytes"]
-    if not file_bytes:
-        st.error("❌ File upload bị rỗng hoặc lỗi. Vui lòng chọn lại ảnh.")
-    else:
-        np_arr = np.frombuffer(file_bytes, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        if img is None:
-            st.error("❌ Không thể đọc ảnh đã tải lên.")
-        else:
-            # Nhận diện ảnh upload
-            annotated, boxes, scores, cids = predict_frame(model, img, conf=CONF_THRESHOLD)
-            frame_placeholder.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), channels="RGB", use_container_width=True)
-            defect_detected = any(cid != 0 for cid in cids)
-            if defect_detected:
-                result_placeholder.error("❌ Phát hiện khuyết tật ốc!")
-            else:
-                result_placeholder.success("✅ Vít OK — Không phát hiện khuyết tật.")
+uploaded_files = st.session_state.get("uploaded_files", [])
+if uploaded_files and not st.session_state["running"]:
+    st.markdown("### 🖼️ Kết quả nhận diện ảnh")
+    st.info(f"📸 Đã upload {len(uploaded_files)} ảnh")
+    
+    # Hiển thị ảnh dạng grid (3 cột)
+    cols = st.columns(3)
+    
+    total_ok = 0
+    total_defect = 0
+    
+    for idx, uploaded_file in enumerate(uploaded_files):
+        col = cols[idx % 3]
+        
+        with col:
+            # Đọc và xử lý từng ảnh
+            file_bytes = uploaded_file.read()
+            uploaded_file.seek(0)  # Reset để có thể đọc lại nếu cần
+            
+            if file_bytes:
+                np_arr = np.frombuffer(file_bytes, np.uint8)
+                img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                
+                if img is not None:
+                    # Nhận diện
+                    annotated, boxes, scores, cids = predict_frame(model, img, conf=CONF_THRESHOLD)
+                    
+                    # Hiển thị ảnh đã annotate
+                    st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), 
+                             caption=uploaded_file.name, 
+                             use_container_width=True)
+                    
+                    # Kết quả
+                    defect_detected = any(cid != 0 for cid in cids)
+                    if defect_detected:
+                        st.error("❌ Lỗi")
+                        total_defect += 1
+                    else:
+                        st.success("✅ OK")
+                        total_ok += 1
+                else:
+                    st.error(f"❌ Không đọc được: {uploaded_file.name}")
+    
+    # Tổng kết
+    st.markdown("---")
+    st.markdown("### 📊 Tổng kết")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("📸 Tổng ảnh", len(uploaded_files))
+    with col2:
+        st.metric("✅ OK", total_ok)
+    with col3:
+        st.metric("❌ Lỗi", total_defect)
 
 # Hiển thị thống kê database
 with st.sidebar:
