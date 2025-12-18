@@ -7,7 +7,7 @@ from detect import load_model, predict_frame
 from database import init_db, save_detection, get_detection_stats
 from styles import apply_premium_theme
 
-st.set_page_config(page_title="Phát hiện khuyết tật ốc - Webcam", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Phát hiện khiếm khuyết ốc - Webcam", layout="wide", initial_sidebar_state="expanded")
 
 # Apply premium theme
 apply_premium_theme()
@@ -62,7 +62,7 @@ with st.sidebar:
     )
     
     AUTO_CAPTURE = st.checkbox(
-        "Tự động lưu khuyết tật",
+        "Tự động lưu khiếm khuyết",
         value=True,
         help="Lưu frame khi phát hiện"
     )
@@ -162,9 +162,9 @@ if st.session_state["running"]:
             # Class 0 = OK, Classes 1-5 = defect types
             defect_detected = any(cid in DEFECT_CLASSES for cid in cids)
             if defect_detected:
-                result_placeholder.error("❌ Phát hiện khuyết tật ốc!")
+                result_placeholder.error("❌ Phát hiện khiếm khuyết ốc!")
             else:
-                result_placeholder.success("✅ Vít OK — Không phát hiện khuyết tật.")
+                result_placeholder.success("✅ Vít OK — Không phát hiện khiếm khuyết.")
 
             # ========== AUTO-CAPTURE Logic ==========
             current_time = time.time()

@@ -58,7 +58,7 @@ with st.sidebar:
     )
     
     SAVE_DEFECTS = st.checkbox(
-        "Tự động lưu khuyết tật",
+        "Tự động lưu khiếm khuyết",
         value=True,
         help="Lưu frames lỗi vào database"
     )

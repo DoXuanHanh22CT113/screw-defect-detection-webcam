@@ -78,7 +78,7 @@ streamlit run app.py
 **Cài đặt trong sidebar:**
 - 🎚️ **Độ tin cậy**: Điều chỉnh 0.15-0.95 (khuyến nghị: 0.30)
 - 🔄 **Test-Time Augmentation**: BẬT để phát hiện tốt nhất
-- 💾 **Tự động lưu khuyết tật**: BẬT để lưu tự động khi phát hiện lỗi
+- 💾 **Tự động lưu khiếm khuyết**: BẬT để lưu tự động khi phát hiện lỗi
 
 ### 2. Video Analysis:
 ```bash

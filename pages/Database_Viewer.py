@@ -44,27 +44,27 @@ if not detections:
 else:
     # Chuyển đổi sang DataFrame
     df = pd.DataFrame(detections, columns=[
-        'ID', 'Timestamp', 'Đường dẫn ảnh', 'Phát hiện khuyết tật', 
-        'Số khuyết tật', 'Điểm tin cậy', 'ID lớp', 'Hộp'
+        'ID', 'Timestamp', 'Đường dẫn ảnh', 'Phát hiện khiếm khuyết', 
+        'Số khiếm khuyết', 'Điểm tin cậy', 'ID lớp', 'Hộp'
     ])
     
     # Định dạng lại
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-    df['Trạng thái'] = df['Phát hiện khuyết tật'].map({1: '❌ Khuyết tật', 0: '✅ OK'})
+    df['Trạng thái'] = df['Phát hiện khiếm khuyết'].map({1: '❌ Khiếm khuyết', 0: '✅ OK'})
     df['Giờ'] = df['Timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
     
     # ========== FILTER TABS ==========
     tab1, tab2, tab3 = st.tabs(["🖼️ Xem thư viện", "📋 Xem bảng", "📊 Thống kê"])
     
     with tab1:
-        st.subheader("Thư viện ảnh khuyết tật")
+        st.subheader("Thư viện ảnh khiếm khuyết")
         # Lọc chỉ ảnh có defect
-        defect_df = df[df['Phát hiện khuyết tật'] == 1].sort_values('Timestamp', ascending=False)
+        defect_df = df[df['Phát hiện khiếm khuyết'] == 1].sort_values('Timestamp', ascending=False)
         
         if len(defect_df) == 0:
-            st.info("✅ Không tìm thấy khuyết tật trong cơ sở dữ liệu!")
+            st.info("✅ Không tìm thấy khiếm khuyết trong cơ sở dữ liệu!")
         else:
-            st.info(f"📸 Đang hiển thị {len(defect_df)} hình ảnh khuyết tật")
+            st.info(f"📸 Đang hiển thị {len(defect_df)} hình ảnh khiếm khuyết")
             
             # Session state để track deletions
             if 'deleted_ids' not in st.session_state:
@@ -96,7 +96,7 @@ else:
                         
                         st.image(image_path, use_container_width=True)
                         st.markdown(f"**🕐 {row['Giờ']}**")
-                        st.markdown(f"Khuyết tật: **{row['Số khuyết tật']}**")
+                        st.markdown(f"Khiếm khuyết: **{row['Số khiếm khuyết']}**")
                         scores_str = ", ".join([f"{s:.2f}" for s in json.loads(row['Điểm tin cậy'])])
                         st.caption(f"Độ tin cậy: {scores_str}")
                         
@@ -120,7 +120,7 @@ else:
     
     with tab2:
         st.subheader("Bảng tất cả phát hiện")
-        st.dataframe(df[['ID', 'Giờ', 'Số khuyết tật', 'Trạng thái', 'Đường dẫn ảnh']], 
+        st.dataframe(df[['ID', 'Giờ', 'Số khiếm khuyết', 'Trạng thái', 'Đường dẫn ảnh']], 
                      use_container_width=True)
     
     with tab3:
@@ -134,12 +134,12 @@ else:
             st.metric("📈 Tổng bản ghi", total)
         
         with col2:
-            defects = (df['Phát hiện khuyết tật'] == 1).sum()
-            st.metric("❌ Tìm thấy khuyết tật", defects)
+            defects = (df['Phát hiện khiếm khuyết'] == 1).sum()
+            st.metric("❌ Tìm thấy khiếm khuyết", defects)
         
         with col3:
-            ok = (df['Phát hiện khuyết tật'] == 0).sum()
-            st.metric("✅ Không có khuyết tật", ok)
+            ok = (df['Phát hiện khiếm khuyết'] == 0).sum()
+            st.metric("✅ Không có khiếm khuyết", ok)
         
         # Chart
         st.divider()
@@ -165,9 +165,9 @@ else:
     
     # Defect-only CSV
     with col2:
-        defect_csv = df[df['Phát hiện khuyết tật'] == 1].to_csv(index=False)
+        defect_csv = df[df['Phát hiện khiếm khuyết'] == 1].to_csv(index=False)
         st.download_button(
-            label="❌ Chỉ tải khuyết tật",
+            label="❌ Chỉ tải khiếm khuyết",
             data=defect_csv,
             file_name="defects_only.csv",
             mime="text/csv"

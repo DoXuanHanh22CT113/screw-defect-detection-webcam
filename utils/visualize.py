@@ -21,7 +21,7 @@ def draw_boxes(frame, boxes, scores, class_ids, class_names=None, conf_threshold
             label = class_names[cid]
         text = f"{label} {score:.2f}"
         
-        # Màu đỏ cho khuyết tật
+        # Màu đỏ cho khiếm khuyết
         box_color = COLOR_DEFECT
         text_color = COLOR_TEXT
         
