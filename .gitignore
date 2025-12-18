@@ -10,7 +10,6 @@ __pycache__/
 # Project specific
 outputs/
 screw_detection.db
-best.pt
 serviceAccountKey.json
 
 # Streamlit
