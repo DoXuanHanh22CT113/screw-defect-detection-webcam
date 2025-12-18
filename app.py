@@ -377,13 +377,22 @@ else:
 uploaded_files = st.session_state.get("uploaded_files", [])
 if uploaded_files and not st.session_state["running"]:
     st.markdown("### 🖼️ Kết quả nhận diện ảnh")
-    st.info(f"📸 Đã upload {len(uploaded_files)} ảnh")
+    
+    # Nút xóa tất cả
+    col_header1, col_header2 = st.columns([3, 1])
+    with col_header1:
+        st.info(f"📸 Đã upload {len(uploaded_files)} ảnh")
+    with col_header2:
+        if st.button("🗑️ Xóa tất cả", use_container_width=True):
+            st.session_state["uploaded_files"] = []
+            st.rerun()
     
     # Hiển thị ảnh dạng grid (3 cột)
     cols = st.columns(3)
     
     total_ok = 0
     total_defect = 0
+    files_to_remove = []
     
     for idx, uploaded_file in enumerate(uploaded_files):
         col = cols[idx % 3]
@@ -406,16 +415,29 @@ if uploaded_files and not st.session_state["running"]:
                              caption=uploaded_file.name, 
                              use_container_width=True)
                     
-                    # Kết quả
+                    # Kết quả và nút xóa
+                    result_col, delete_col = st.columns([2, 1])
+                    
                     defect_detected = any(cid != 0 for cid in cids)
-                    if defect_detected:
-                        st.error("❌ Lỗi")
-                        total_defect += 1
-                    else:
-                        st.success("✅ OK")
-                        total_ok += 1
+                    with result_col:
+                        if defect_detected:
+                            st.error("❌ Lỗi")
+                            total_defect += 1
+                        else:
+                            st.success("✅ OK")
+                            total_ok += 1
+                    
+                    with delete_col:
+                        if st.button("🗑️", key=f"del_{idx}", help=f"Xóa {uploaded_file.name}"):
+                            files_to_remove.append(idx)
                 else:
                     st.error(f"❌ Không đọc được: {uploaded_file.name}")
+    
+    # Xử lý xóa file
+    if files_to_remove:
+        new_files = [f for i, f in enumerate(uploaded_files) if i not in files_to_remove]
+        st.session_state["uploaded_files"] = new_files
+        st.rerun()
     
     # Tổng kết
     st.markdown("---")
