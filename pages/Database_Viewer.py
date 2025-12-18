@@ -7,6 +7,80 @@ import os
 from datetime import datetime
 
 st.set_page_config(page_title="Trình xem cơ sở dữ liệu", layout="wide")
+
+# Custom CSS - Premium Dark Mode Theme  
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    .main, .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
+    }
+    
+    h1, h2 {
+        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 700 !important;
+    }
+    
+    h3 { color: #e2e8f0 !important; font-family: 'Inter', sans-serif !important; }
+    body, p, span, div { color: #e2e8f0; font-family: 'Inter', sans-serif; }
+    
+    .stButton > button {
+        background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 50%, #00D4FF 100%) !important;
+        color: white !important;
+        font-weight: 600 !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 12px 24px !important;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4) !important;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-3px) scale(1.02) !important;
+        box-shadow: 0 8px 30px rgba(139, 92, 246, 0.6) !important;
+    }
+    
+    [data-testid="stMetricValue"] {
+        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        font-weight: 700 !important;
+        font-size: 2rem !important;
+    }
+    
+    .stTabs [data-baseweb="tab-list"] {
+        background: rgba(30, 41, 59, 0.6) !important;
+        border-radius: 12px !important;
+        padding: 5px !important;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        color: #94a3b8 !important;
+        border-radius: 8px !important;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%) !important;
+        color: white !important;
+    }
+    
+    .stDataFrame {
+        background: rgba(30, 41, 59, 0.8) !important;
+        border-radius: 12px !important;
+    }
+    
+    hr {
+        border: none !important;
+        height: 1px !important;
+        background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), transparent) !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("📊 Trình xem cơ sở dữ liệu phát hiện")
 
 # Tạo thư mục pages nếu chưa có

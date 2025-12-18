@@ -7,101 +7,105 @@ import numpy as np
 from detect import load_model, predict_frame
 from database import init_db, save_detection
 
-st.set_page_config(page_title="Phát hiện khuyết tật ốc - Video", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Phát hiện khiếm khuyết ốc - Video", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS - Dark Mode Theme
+# Custom CSS - Premium Dark Mode Theme
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
     :root {
-        --primary-color: #00D4FF;
-        --success-color: #00FF88;
-        --danger-color: #FF1744;
-        --warning-color: #FFB300;
-        --bg-dark: #0a0e27;
-        --card-dark: #151933;
-        --text-light: #e8eef5;
+        --primary-cyan: #00D4FF;
+        --primary-purple: #8B5CF6;
+        --success-color: #10B981;
+        --danger-color: #EF4444;
     }
     
-    /* Main container */
-    .main {
-        background: linear-gradient(180deg, #87CEEB 0%, #e0f6ff 30%, #90EE90 70%, #2d8659 100%);
-        background-attachment: fixed;
+    .main, .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
+        background-attachment: fixed !important;
     }
     
-    /* Headers */
     h1 {
-        color: #0d47a1 !important;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        font-family: 'Inter', sans-serif !important;
         font-weight: 700 !important;
-        margin-bottom: 5px !important;
-        margin-top: 0 !important;
     }
     
-    h2 {
-        color: #1565c0 !important;
-        border-bottom: 3px solid #2ecc71;
-        padding-bottom: 5px;
-        margin-top: 10px !important;
-        margin-bottom: 10px !important;
-    }
+    h2, h3 { color: #e2e8f0 !important; font-family: 'Inter', sans-serif !important; }
+    body, p, span, div { color: #e2e8f0; font-family: 'Inter', sans-serif; }
     
-    h3 {
-        color: #2d8659 !important;
-        font-weight: 600 !important;
-        margin-top: 5px !important;
-        margin-bottom: 5px !important;
-    }
-    
-    /* Text */
-    body {
-        color: #1a1a1a;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    
-    /* Buttons */
     .stButton > button {
-        background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 50%, #00D4FF 100%) !important;
         color: white !important;
         font-weight: 600 !important;
         border: none !important;
-        border-radius: 6px !important;
-        padding: 8px 16px !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3) !important;
-        font-size: 14px !important;
+        border-radius: 12px !important;
+        padding: 12px 24px !important;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4) !important;
     }
     
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(46, 204, 113, 0.5) !important;
-        background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
+        transform: translateY(-3px) scale(1.02) !important;
+        box-shadow: 0 8px 30px rgba(139, 92, 246, 0.6) !important;
     }
     
-    /* Divider */
-    hr {
-        border: 1px solid rgba(46, 204, 113, 0.3) !important;
-        margin: 15px 0 !important;
+    section[data-testid="stSidebar"] {
+        background: rgba(15, 23, 42, 0.95) !important;
+        backdrop-filter: blur(20px) !important;
+        border-right: 1px solid rgba(139, 92, 246, 0.2) !important;
     }
     
-    /* Alert boxes */
+    [data-testid="stMetricValue"] {
+        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        font-weight: 700 !important;
+    }
+    
+    .stSlider > div > div > div > div {
+        background: linear-gradient(90deg, #8B5CF6 0%, #00D4FF 100%) !important;
+    }
+    
     .stAlert {
-        border-radius: 8px !important;
-        border-left: 4px solid #2ecc71 !important;
-        background-color: rgba(255, 255, 255, 0.85) !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(139, 92, 246, 0.3) !important;
+        background: rgba(30, 41, 59, 0.8) !important;
     }
     
-    /* Sidebar */
-    .css-1d391kg {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(240, 248, 255, 0.9) 100%);
+    hr {
+        border: none !important;
+        height: 1px !important;
+        background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), transparent) !important;
+    }
+    
+    .stTabs [data-baseweb="tab-list"] {
+        background: rgba(30, 41, 59, 0.6) !important;
+        border-radius: 12px !important;
+        padding: 5px !important;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        color: #94a3b8 !important;
+        border-radius: 8px !important;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%) !important;
+        color: white !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("🎥 Phân tích video — Batch")
 st.markdown("""
-<div style="background: linear-gradient(135deg, rgba(46, 204, 113, 0.15) 0%, rgba(52, 152, 219, 0.1) 100%);
-            padding: 12px; border-radius: 6px; border-left: 3px solid #2ecc71; margin-bottom: 15px;">
-    <p style="color: #1a1a1a; margin: 0; font-size: 14px;">
+<div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
+            padding: 15px 20px; border-radius: 12px; border-left: 4px solid #8B5CF6; margin-bottom: 20px;
+            backdrop-filter: blur(10px);">
+    <p style="color: #e2e8f0; margin: 0; font-size: 15px; font-weight: 500;">
     📹 Upload • 🎬 Frame-by-frame • 🎯 Auto phát hiện • 💾 Lưu
     </p>
 </div>

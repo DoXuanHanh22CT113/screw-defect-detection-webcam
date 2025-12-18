@@ -8,127 +8,215 @@ from database import init_db, save_detection, get_detection_stats
 
 st.set_page_config(page_title="Phát hiện khuyết tật ốc - Webcam", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS - Dark Mode Theme
+# Custom CSS - Premium Dark Mode Theme
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
     :root {
-        --primary-color: #00D4FF;
-        --success-color: #00FF88;
-        --danger-color: #FF1744;
-        --warning-color: #FFB300;
-        --bg-dark: #0a0e27;
-        --card-dark: #151933;
-        --text-light: #e8eef5;
+        --primary-cyan: #00D4FF;
+        --primary-purple: #8B5CF6;
+        --success-color: #10B981;
+        --danger-color: #EF4444;
+        --warning-color: #F59E0B;
+        --bg-dark: #0f172a;
+        --bg-darker: #020617;
+        --card-dark: rgba(30, 41, 59, 0.8);
+        --border-color: rgba(148, 163, 184, 0.1);
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
     }
     
-    /* Main container */
+    /* Main container - Dark gradient */
     .main {
-        background: linear-gradient(180deg, #87CEEB 0%, #e0f6ff 30%, #90EE90 70%, #2d8659 100%);
-        background-attachment: fixed;
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
+        background-attachment: fixed !important;
     }
     
-    /* Headers */
+    .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
+    }
+    
+    /* Headers with gradient text effect */
     h1 {
-        color: #0d47a1 !important;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        background-clip: text !important;
+        font-family: 'Inter', sans-serif !important;
         font-weight: 700 !important;
-        margin-bottom: 5px !important;
-        margin-top: 0 !important;
+        font-size: 2.5rem !important;
+        margin-bottom: 10px !important;
+        text-shadow: none !important;
     }
     
     h2 {
-        color: #1565c0 !important;
-        border-bottom: 3px solid #2ecc71;
-        padding-bottom: 5px;
-        margin-top: 10px !important;
-        margin-bottom: 10px !important;
+        color: #00D4FF !important;
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 600 !important;
+        border-bottom: 2px solid rgba(139, 92, 246, 0.5);
+        padding-bottom: 8px;
+        margin-top: 15px !important;
     }
     
     h3 {
-        color: #2d8659 !important;
-        font-weight: 600 !important;
-        margin-top: 5px !important;
-        margin-bottom: 5px !important;
+        color: #e2e8f0 !important;
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 500 !important;
     }
     
-    /* Text */
-    body {
-        color: #1a1a1a;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* General text */
+    body, p, span, div {
+        color: #e2e8f0;
+        font-family: 'Inter', sans-serif;
     }
     
-    /* Buttons */
+    /* Glassmorphism Buttons */
     .stButton > button {
-        background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 50%, #00D4FF 100%) !important;
         color: white !important;
         font-weight: 600 !important;
         border: none !important;
-        border-radius: 6px !important;
-        padding: 8px 16px !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3) !important;
+        border-radius: 12px !important;
+        padding: 12px 24px !important;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4) !important;
         font-size: 14px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
     }
     
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(46, 204, 113, 0.5) !important;
-        background: linear-gradient(135deg, #27ae60 0%, #229954 100%) !important;
+        transform: translateY(-3px) scale(1.02) !important;
+        box-shadow: 0 8px 30px rgba(139, 92, 246, 0.6) !important;
     }
     
-    /* Metrics */
-    .metric-card {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 248, 255, 0.8) 100%);
-        border-left: 4px solid #2ecc71;
-        padding: 12px;
-        border-radius: 6px;
-        margin: 6px 0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    .stButton > button:active {
+        transform: translateY(-1px) scale(0.98) !important;
     }
     
-    /* Slider */
-    .stSlider {
-        padding: 10px 0;
+    /* Sidebar - Glassmorphism */
+    section[data-testid="stSidebar"] {
+        background: rgba(15, 23, 42, 0.95) !important;
+        backdrop-filter: blur(20px) !important;
+        border-right: 1px solid rgba(139, 92, 246, 0.2) !important;
     }
     
+    section[data-testid="stSidebar"] .stMarkdown {
+        color: #e2e8f0 !important;
+    }
+    
+    /* Metrics with glow effect */
+    [data-testid="stMetricValue"] {
+        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        font-weight: 700 !important;
+        font-size: 2rem !important;
+    }
+    
+    [data-testid="stMetricLabel"] {
+        color: #94a3b8 !important;
+    }
+    
+    /* Slider with gradient track */
     .stSlider > div > div > div > div {
-        background: linear-gradient(90deg, #2ecc71 0%, #27ae60 100%);
+        background: linear-gradient(90deg, #8B5CF6 0%, #00D4FF 100%) !important;
     }
     
-    /* Sidebar */
-    .css-1d391kg {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(240, 248, 255, 0.9) 100%);
+    .stSlider > div > div > div {
+        background: rgba(148, 163, 184, 0.2) !important;
     }
     
-    /* Info boxes */
+    /* Alert boxes with modern styling */
     .stAlert {
+        border-radius: 12px !important;
+        border: 1px solid rgba(139, 92, 246, 0.3) !important;
+        background: rgba(30, 41, 59, 0.8) !important;
+        backdrop-filter: blur(10px) !important;
+    }
+    
+    div[data-testid="stNotification"] {
+        background: rgba(30, 41, 59, 0.9) !important;
+        border: 1px solid rgba(139, 92, 246, 0.3) !important;
+        border-radius: 12px !important;
+    }
+    
+    /* Success message */
+    .element-container:has(.stSuccess) {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%) !important;
+        border-left: 4px solid #10B981 !important;
         border-radius: 8px !important;
-        border-left: 4px solid #2ecc71 !important;
-        background-color: rgba(255, 255, 255, 0.85) !important;
     }
     
-    /* Divider */
+    /* Error message */
+    .element-container:has(.stError) {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%) !important;
+        border-left: 4px solid #EF4444 !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Divider with gradient */
     hr {
-        border: 1px solid rgba(46, 204, 113, 0.3) !important;
-        margin: 30px 0 !important;
+        border: none !important;
+        height: 1px !important;
+        background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), transparent) !important;
+        margin: 25px 0 !important;
     }
     
-    /* Cards effect */
-    .metric {
-        background: linear-gradient(135deg, rgba(46, 204, 113, 0.08) 0%, rgba(39, 174, 96, 0.08) 100%);
-        border-radius: 12px;
-        padding: 20px;
-        border: 1px solid rgba(46, 204, 113, 0.2);
+    /* File uploader */
+    .stFileUploader {
+        background: rgba(30, 41, 59, 0.6) !important;
+        border: 2px dashed rgba(139, 92, 246, 0.4) !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+    }
+    
+    .stFileUploader:hover {
+        border-color: rgba(0, 212, 255, 0.6) !important;
+        background: rgba(30, 41, 59, 0.8) !important;
+    }
+    
+    /* Checkbox styling */
+    .stCheckbox label {
+        color: #e2e8f0 !important;
+    }
+    
+    /* Image container with subtle border */
+    .stImage {
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #1e293b;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #8B5CF6 0%, #6366F1 100%);
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #A78BFA 0%, #818CF8 100%);
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🔍 Phát hiện ốc — Live")
+st.title("🔍 Phát hiện khiếm khuyết ốc — Live")
 st.markdown("""
-<div style="background: linear-gradient(135deg, rgba(46, 204, 113, 0.15) 0%, rgba(52, 152, 219, 0.1) 100%);
-            padding: 12px; border-radius: 6px; border-left: 3px solid #2ecc71; margin-bottom: 15px;">
-    <p style="color: #1a1a1a; margin: 0; font-size: 14px;">
-    📹 Webcam thời thực • 🎯 Phát hiện khuyết tật • 💾 Tự động lưu
+<div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
+            padding: 15px 20px; border-radius: 12px; border-left: 4px solid #8B5CF6; margin-bottom: 20px;
+            backdrop-filter: blur(10px);">
+    <p style="color: #e2e8f0; margin: 0; font-size: 15px; font-weight: 500;">
+    📹 Webcam thời thực • 🎯 Phát hiện khiếm khuyết • 💾 Tự động lưu • 🔬 AI-Powered
     </p>
 </div>
 """, unsafe_allow_html=True)
