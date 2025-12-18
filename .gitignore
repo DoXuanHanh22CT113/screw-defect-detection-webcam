@@ -1,3 +1,21 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Project specific
+outputs/
+screw_detection.db
+best.pt
+serviceAccountKey.json
+
+# Streamlit
+.streamlit/secrets.toml
+
 # Logs
 logs
 *.log
