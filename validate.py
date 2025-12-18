@@ -11,48 +11,52 @@ from typing import Dict, List, Sequence, Tuple, Union
 # ---- Configuration -------------------------------------------------------
 
 # Các rule mặc định áp dụng cho mọi lớp (OK & defect)
+# === THAM SỐ TỐI ƯU CHO PHÁT HIỆN DEFECT ===
+# Các rule mặc định đã được tinh chỉnh kỹ lưỡng
 DEFAULT_RULES: Dict[str, Union[float, Tuple[float, float]]] = {
-    "min_area_ratio": 0.0008,   # >= 0.08% diện tích frame ~ 300px² với frame 640x480
-    "max_area_ratio": 0.55,     # Không cho bounding box bao trùm >55% frame
-    "min_width_ratio": 0.025,   # >= 2.5% chiều ngang frame
-    "min_height_ratio": 0.025,  # >= 2.5% chiều cao frame
-    "aspect_ratio": (0.25, 4.0),
-    "edge_buffer_ratio": 0.01,  # Tâm box phải cách mép >=1% (tránh cut-off)
+    "min_area_ratio": 0.0002,   # >= 0.02% diện tích frame (~60px² với 640x480)
+    "max_area_ratio": 0.80,     # Cho phép box lớn (vít gần camera)
+    "min_width_ratio": 0.015,   # >= 1.5% chiều ngang frame
+    "min_height_ratio": 0.015,  # >= 1.5% chiều cao frame
+    "aspect_ratio": (0.08, 15.0),  # Nới lỏng aspect ratio
+    "edge_buffer_ratio": 0.005,  # Tâm box cách mép >=0.5%
 }
 
-# Rule riêng theo class (0=OK, 1=manipulated, 2=scratch, 3=thread)
+# Rule riêng theo class (6 classes từ best.pt)
+# 0=ok, 1=manipulated_front, 2-5=various defects (scratch_head, scratch_neck, thread_side, thread_top)
 CLASS_RULE_OVERRIDES: Dict[int, Dict[str, Union[float, Tuple[float, float]]]] = {
-    0: {  # OK → cần box lớn, confidence cao hơn (tránh nhận 'OK' nhầm)
-        "min_area_ratio": 0.0015,
-        "max_area_ratio": 0.65,
-        "aspect_ratio": (0.35, 3.5),
+    0: {  # OK → yêu cầu box khá lớn để chắc chắn là vít hoàn chỉnh
+        "min_area_ratio": 0.001,
+        "max_area_ratio": 0.85,
+        "aspect_ratio": (0.1, 10.0),
     },
-    1: {  # manipulated → cho phép box nhỏ hơn, dài hơn
-        "min_area_ratio": 0.0005,
-        "max_area_ratio": 0.55,
-        "aspect_ratio": (0.2, 4.5),
+    1: {  # manipulated_front → vít bị biến dạng mặt trước - NỚI LỎNG
+        "min_area_ratio": 0.0001,
+        "max_area_ratio": 0.85,
+        "aspect_ratio": (0.03, 30.0),
     },
-    2: {  # scratch → có thể rất dài và mảnh
-        "min_area_ratio": 0.0004,
-        "aspect_ratio": (0.15, 6.0),
-    },
-    3: {  # thread → cần giữ lại cả box dài/hẹp
-        "min_area_ratio": 0.0004,
-        "aspect_ratio": (0.15, 6.5),
-    },
+    # Classes 2-5 (scratch_head, scratch_neck, thread_side, thread_top) share same relaxed rules
+    **{class_id: {
+        "min_area_ratio": 0.00005,
+        "max_area_ratio": 0.85,
+        "aspect_ratio": (0.02, 50.0),
+    } for class_id in [2, 3, 4, 5]}
 }
 
 # Điều chỉnh confidence theo class.
-# Giá trị là offset cộng thêm vào min_conf (đã clamp trong khoảng 0.05-0.95)
+# Offset DƯƠNG = yêu cầu cao hơn, Offset ÂM = dễ phát hiện hơn
+# ƯU TIÊN PHÁT HIỆN DEFECT: Ngưỡng defect THẤP, ngưỡng OK CAO
 CLASS_CONFIDENCE_OFFSET: Dict[int, float] = {
-    0: +0.10,  # yêu cầu cao hơn cho "OK"
-    1: -0.15,  # nới lỏng cho defect
-    2: -0.15,
-    3: -0.12,
+    0: +0.25,   # OK → yêu cầu RẤT CAO để tránh nhận nhầm vít lỗi thành OK
+    1: -0.25,   # manipulated_front - giảm nhiều để dễ phát hiện
+    2: -0.25,   # scratch_head - giảm nhiều (khó detect)
+    3: -0.25,   # scratch_neck - giảm nhiều (khó detect)
+    4: -0.25,   # thread_side - giảm nhiều (khó detect)
+    5: -0.25,   # thread_top - giảm nhiều (khó detect)
 }
 
-CONFIDENCE_MIN = 0.05
-CONFIDENCE_MAX = 0.95
+CONFIDENCE_MIN = 0.02   # Rất thấp để bắt được defect
+CONFIDENCE_MAX = 0.97
 
 # -------------------------------------------------------------------------
 

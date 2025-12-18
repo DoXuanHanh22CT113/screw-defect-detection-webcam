@@ -1,90 +1,40 @@
 import streamlit as st
 import pandas as pd
-import sqlite3
 import json
-from database import get_all_detections, delete_old_detections
+from database import get_all_detections, delete_old_detections, delete_detection
 import os
+import time
 from datetime import datetime
+from styles import apply_premium_theme
 
 st.set_page_config(page_title="Trình xem cơ sở dữ liệu", layout="wide")
 
-# Custom CSS - Premium Dark Mode Theme  
+# Apply premium theme
+apply_premium_theme()
+
+# Enhanced Header
 st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
-    .main, .stApp {
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
-    }
-    
-    h1, h2 {
-        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        font-family: 'Inter', sans-serif !important;
-        font-weight: 700 !important;
-    }
-    
-    h3 { color: #e2e8f0 !important; font-family: 'Inter', sans-serif !important; }
-    body, p, span, div { color: #e2e8f0; font-family: 'Inter', sans-serif; }
-    
-    .stButton > button {
-        background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 50%, #00D4FF 100%) !important;
-        color: white !important;
-        font-weight: 600 !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 12px 24px !important;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4) !important;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-3px) scale(1.02) !important;
-        box-shadow: 0 8px 30px rgba(139, 92, 246, 0.6) !important;
-    }
-    
-    [data-testid="stMetricValue"] {
-        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        font-weight: 700 !important;
-        font-size: 2rem !important;
-    }
-    
-    .stTabs [data-baseweb="tab-list"] {
-        background: rgba(30, 41, 59, 0.6) !important;
-        border-radius: 12px !important;
-        padding: 5px !important;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        color: #94a3b8 !important;
-        border-radius: 8px !important;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%) !important;
-        color: white !important;
-    }
-    
-    .stDataFrame {
-        background: rgba(30, 41, 59, 0.8) !important;
-        border-radius: 12px !important;
-    }
-    
-    hr {
-        border: none !important;
-        height: 1px !important;
-        background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), transparent) !important;
-    }
-</style>
+<div style="text-align: center; margin-bottom: 20px;">
+    <div style="font-size: 4rem; margin-bottom: 10px;">📊</div>
+</div>
 """, unsafe_allow_html=True)
 
-st.title("📊 Trình xem cơ sở dữ liệu phát hiện")
+st.title("📊 DATABASE VIEWER")
 
-# Tạo thư mục pages nếu chưa có
-os.makedirs("pages", exist_ok=True)
+st.markdown("""
+<div style="background: linear-gradient(135deg, rgba(157, 78, 221, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
+            padding: 20px 30px; border-radius: 16px; border: 1px solid rgba(157, 78, 221, 0.4); 
+            margin-bottom: 30px; backdrop-filter: blur(10px); text-align: center;">
+    <p style="color: #E0E7FF; margin: 0; font-size: 16px; font-weight: 500; line-height: 1.8;">
+    <span class="feature-tag">🖼️ Gallery View</span>
+    <span class="feature-tag">📋 Table View</span>
+    <span class="feature-tag">📊 Statistics</span>
+    <span class="feature-tag">🗑️ Delete Records</span>
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+
 
 # Lấy tất cả dữ liệu
 detections = get_all_detections()
@@ -116,18 +66,55 @@ else:
         else:
             st.info(f"📸 Đang hiển thị {len(defect_df)} hình ảnh khuyết tật")
             
+            # Session state để track deletions
+            if 'deleted_ids' not in st.session_state:
+                st.session_state.deleted_ids = set()
+            
             # Hiển thị ảnh dưới dạng grid
             cols = st.columns(3)
+            img_count = 0
             for idx, row in defect_df.iterrows():
-                col = cols[idx % 3]
+                # Skip if deleted
+                if row['ID'] in st.session_state.deleted_ids:
+                    continue
+                    
+                col = cols[img_count % 3]
+                img_count += 1
+                
                 with col:
                     image_path = row['Đường dẫn ảnh']
                     if os.path.exists(image_path):
+                        # Container với border cho mỗi ảnh
+                        st.markdown(f"""
+                        <div style='background: rgba(30, 41, 59, 0.6); 
+                                    border-radius: 12px; 
+                                    padding: 10px; 
+                                    border: 1px solid rgba(139, 92, 246, 0.3);
+                                    margin-bottom: 15px;'>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
                         st.image(image_path, use_container_width=True)
                         st.markdown(f"**🕐 {row['Giờ']}**")
                         st.markdown(f"Khuyết tật: **{row['Số khuyết tật']}**")
                         scores_str = ", ".join([f"{s:.2f}" for s in json.loads(row['Điểm tin cậy'])])
                         st.caption(f"Độ tin cậy: {scores_str}")
+                        
+                        # Delete button
+                        if st.button(f"🗑️ Xóa", key=f"delete_{row['ID']}", use_container_width=True):
+                            # Delete from Firebase
+                            delete_detection(row['ID'])
+                            # Delete image file if exists
+                            if os.path.exists(image_path):
+                                try:
+                                    os.remove(image_path)
+                                except Exception as e:
+                                    st.warning(f"Không thể xóa file: {e}")
+                            # Track deletion
+                            st.session_state.deleted_ids.add(row['ID'])
+                            st.success("✅ Đã xóa!")
+                            time.sleep(0.5)
+                            st.rerun()
                     else:
                         st.warning(f"⚠️ Không tìm thấy hình ảnh: {image_path}")
     

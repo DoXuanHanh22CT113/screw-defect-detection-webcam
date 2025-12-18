@@ -6,110 +6,35 @@ import time
 import numpy as np
 from detect import load_model, predict_frame
 from database import init_db, save_detection
+from styles import apply_premium_theme
 
 st.set_page_config(page_title="Phát hiện khiếm khuyết ốc - Video", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS - Premium Dark Mode Theme
+# Apply premium theme
+apply_premium_theme()
+
+# Enhanced Header
 st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
-    :root {
-        --primary-cyan: #00D4FF;
-        --primary-purple: #8B5CF6;
-        --success-color: #10B981;
-        --danger-color: #EF4444;
-    }
-    
-    .main, .stApp {
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
-        background-attachment: fixed !important;
-    }
-    
-    h1 {
-        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        font-family: 'Inter', sans-serif !important;
-        font-weight: 700 !important;
-    }
-    
-    h2, h3 { color: #e2e8f0 !important; font-family: 'Inter', sans-serif !important; }
-    body, p, span, div { color: #e2e8f0; font-family: 'Inter', sans-serif; }
-    
-    .stButton > button {
-        background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 50%, #00D4FF 100%) !important;
-        color: white !important;
-        font-weight: 600 !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 12px 24px !important;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4) !important;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-3px) scale(1.02) !important;
-        box-shadow: 0 8px 30px rgba(139, 92, 246, 0.6) !important;
-    }
-    
-    section[data-testid="stSidebar"] {
-        background: rgba(15, 23, 42, 0.95) !important;
-        backdrop-filter: blur(20px) !important;
-        border-right: 1px solid rgba(139, 92, 246, 0.2) !important;
-    }
-    
-    [data-testid="stMetricValue"] {
-        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        font-weight: 700 !important;
-    }
-    
-    .stSlider > div > div > div > div {
-        background: linear-gradient(90deg, #8B5CF6 0%, #00D4FF 100%) !important;
-    }
-    
-    .stAlert {
-        border-radius: 12px !important;
-        border: 1px solid rgba(139, 92, 246, 0.3) !important;
-        background: rgba(30, 41, 59, 0.8) !important;
-    }
-    
-    hr {
-        border: none !important;
-        height: 1px !important;
-        background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), transparent) !important;
-    }
-    
-    .stTabs [data-baseweb="tab-list"] {
-        background: rgba(30, 41, 59, 0.6) !important;
-        border-radius: 12px !important;
-        padding: 5px !important;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        color: #94a3b8 !important;
-        border-radius: 8px !important;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%) !important;
-        color: white !important;
-    }
-</style>
+<div style="text-align: center; margin-bottom: 20px;">
+    <div style="font-size: 4rem; margin-bottom: 10px;">🎥</div>
+</div>
 """, unsafe_allow_html=True)
 
-st.title("🎥 Phân tích video — Batch")
+st.title("🎥 VIDEO ANALYSIS")
+
 st.markdown("""
-<div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
-            padding: 15px 20px; border-radius: 12px; border-left: 4px solid #8B5CF6; margin-bottom: 20px;
-            backdrop-filter: blur(10px);">
-    <p style="color: #e2e8f0; margin: 0; font-size: 15px; font-weight: 500;">
-    📹 Upload • 🎬 Frame-by-frame • 🎯 Auto phát hiện • 💾 Lưu
+<div style="background: linear-gradient(135deg, rgba(157, 78, 221, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
+            padding: 20px 30px; border-radius: 16px; border: 1px solid rgba(157, 78, 221, 0.4); 
+            margin-bottom: 30px; backdrop-filter: blur(10px); text-align: center;">
+    <p style="color: #E0E7FF; margin: 0; font-size: 16px; font-weight: 500; line-height: 1.8;">
+    <span class="feature-tag">📹 Upload Video</span>
+    <span class="feature-tag">🎬 Frame Analysis</span>
+    <span class="feature-tag">🎯 Auto Detection</span>
+    <span class="feature-tag">💾 Batch Save</span>
     </p>
 </div>
-""")
+""", unsafe_allow_html=True)
+
 
 # Khởi tạo database
 init_db()
@@ -122,8 +47,14 @@ with st.sidebar:
     
     CONF_THRESHOLD = st.slider(
         "Độ tin cậy",
-        min_value=0.3, max_value=0.95, value=0.65, step=0.01,
-        help="Ngưỡng phát hiện (cao = chặt)"
+        min_value=0.15, max_value=0.95, value=0.30, step=0.01,
+        help="Ngưỡng phát hiện (thấp = nhạy hơn, cao = chặt hơn)"
+    )
+    
+    USE_TTA = st.checkbox(
+        "🔄 Test-Time Augmentation",
+        value=True,
+        help="Xoay ảnh nhiều góc độ để phát hiện chính xác hơn (chậm hơn nhưng tốt hơn)"
     )
     
     SAVE_DEFECTS = st.checkbox(
@@ -140,9 +71,17 @@ def get_model(path):
 
 model = get_model(model_path)
 
-# Class names mapping
-CLASS_NAMES = {0: "OK", 1: "Manipulated", 2: "Scratch", 3: "Thread"}
-DEFECT_CLASSES = {1, 2, 3}
+# Class names mapping (6 classes từ model mới)
+# 0=ok, 1=manipulated_front, 2=scratch_head, 3=scratch_neck, 4=thread_side, 5=thread_top
+CLASS_NAMES = {
+    0: "OK",
+    1: "Manipulated Front",
+    2: "Scratch Head",
+    3: "Scratch Neck",
+    4: "Thread Side",
+    5: "Thread Top"
+}
+DEFECT_CLASSES = {1, 2, 3, 4, 5}
 
 # Video upload
 uploaded_video = st.file_uploader("📤 Upload video", type=["mp4", "avi", "mov", "mkv", "flv"])
@@ -178,7 +117,7 @@ if uploaded_video is not None:
                 break
             
             # Run detection
-            annotated, boxes, scores, cids = predict_frame(model, frame, conf=CONF_THRESHOLD)
+            annotated, boxes, scores, cids = predict_frame(model, frame, conf=CONF_THRESHOLD, use_tta=USE_TTA)
             
             # Check if defect detected
             has_defect = any(cid in DEFECT_CLASSES for cid in cids)

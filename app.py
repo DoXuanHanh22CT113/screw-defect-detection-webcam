@@ -3,228 +3,47 @@ import cv2
 import time
 import os
 import numpy as np
-from detect import load_model, predict_frame  # đảm bảo detect.py có 2 hàm này
+from detect import load_model, predict_frame
 from database import init_db, save_detection, get_detection_stats
+from styles import apply_premium_theme
 
 st.set_page_config(page_title="Phát hiện khuyết tật ốc - Webcam", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS - Premium Dark Mode Theme
+# Apply premium theme
+apply_premium_theme()
+
+# Enhanced Header with Icon
 st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
-    :root {
-        --primary-cyan: #00D4FF;
-        --primary-purple: #8B5CF6;
-        --success-color: #10B981;
-        --danger-color: #EF4444;
-        --warning-color: #F59E0B;
-        --bg-dark: #0f172a;
-        --bg-darker: #020617;
-        --card-dark: rgba(30, 41, 59, 0.8);
-        --border-color: rgba(148, 163, 184, 0.1);
-        --text-primary: #f1f5f9;
-        --text-secondary: #94a3b8;
-    }
-    
-    /* Main container - Dark gradient */
-    .main {
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
-        background-attachment: fixed !important;
-    }
-    
-    .stApp {
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%) !important;
-    }
-    
-    /* Headers with gradient text effect */
-    h1 {
-        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        background-clip: text !important;
-        font-family: 'Inter', sans-serif !important;
-        font-weight: 700 !important;
-        font-size: 2.5rem !important;
-        margin-bottom: 10px !important;
-        text-shadow: none !important;
-    }
-    
-    h2 {
-        color: #00D4FF !important;
-        font-family: 'Inter', sans-serif !important;
-        font-weight: 600 !important;
-        border-bottom: 2px solid rgba(139, 92, 246, 0.5);
-        padding-bottom: 8px;
-        margin-top: 15px !important;
-    }
-    
-    h3 {
-        color: #e2e8f0 !important;
-        font-family: 'Inter', sans-serif !important;
-        font-weight: 500 !important;
-    }
-    
-    /* General text */
-    body, p, span, div {
-        color: #e2e8f0;
-        font-family: 'Inter', sans-serif;
-    }
-    
-    /* Glassmorphism Buttons */
-    .stButton > button {
-        background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 50%, #00D4FF 100%) !important;
-        color: white !important;
-        font-weight: 600 !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 12px 24px !important;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4) !important;
-        font-size: 14px !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-3px) scale(1.02) !important;
-        box-shadow: 0 8px 30px rgba(139, 92, 246, 0.6) !important;
-    }
-    
-    .stButton > button:active {
-        transform: translateY(-1px) scale(0.98) !important;
-    }
-    
-    /* Sidebar - Glassmorphism */
-    section[data-testid="stSidebar"] {
-        background: rgba(15, 23, 42, 0.95) !important;
-        backdrop-filter: blur(20px) !important;
-        border-right: 1px solid rgba(139, 92, 246, 0.2) !important;
-    }
-    
-    section[data-testid="stSidebar"] .stMarkdown {
-        color: #e2e8f0 !important;
-    }
-    
-    /* Metrics with glow effect */
-    [data-testid="stMetricValue"] {
-        background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-        font-weight: 700 !important;
-        font-size: 2rem !important;
-    }
-    
-    [data-testid="stMetricLabel"] {
-        color: #94a3b8 !important;
-    }
-    
-    /* Slider with gradient track */
-    .stSlider > div > div > div > div {
-        background: linear-gradient(90deg, #8B5CF6 0%, #00D4FF 100%) !important;
-    }
-    
-    .stSlider > div > div > div {
-        background: rgba(148, 163, 184, 0.2) !important;
-    }
-    
-    /* Alert boxes with modern styling */
-    .stAlert {
-        border-radius: 12px !important;
-        border: 1px solid rgba(139, 92, 246, 0.3) !important;
-        background: rgba(30, 41, 59, 0.8) !important;
-        backdrop-filter: blur(10px) !important;
-    }
-    
-    div[data-testid="stNotification"] {
-        background: rgba(30, 41, 59, 0.9) !important;
-        border: 1px solid rgba(139, 92, 246, 0.3) !important;
-        border-radius: 12px !important;
-    }
-    
-    /* Success message */
-    .element-container:has(.stSuccess) {
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%) !important;
-        border-left: 4px solid #10B981 !important;
-        border-radius: 8px !important;
-    }
-    
-    /* Error message */
-    .element-container:has(.stError) {
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%) !important;
-        border-left: 4px solid #EF4444 !important;
-        border-radius: 8px !important;
-    }
-    
-    /* Divider with gradient */
-    hr {
-        border: none !important;
-        height: 1px !important;
-        background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), transparent) !important;
-        margin: 25px 0 !important;
-    }
-    
-    /* File uploader */
-    .stFileUploader {
-        background: rgba(30, 41, 59, 0.6) !important;
-        border: 2px dashed rgba(139, 92, 246, 0.4) !important;
-        border-radius: 12px !important;
-        padding: 20px !important;
-    }
-    
-    .stFileUploader:hover {
-        border-color: rgba(0, 212, 255, 0.6) !important;
-        background: rgba(30, 41, 59, 0.8) !important;
-    }
-    
-    /* Checkbox styling */
-    .stCheckbox label {
-        color: #e2e8f0 !important;
-    }
-    
-    /* Image container with subtle border */
-    .stImage {
-        border-radius: 12px !important;
-        overflow: hidden !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
-    }
-    
-    /* Custom scrollbar */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: #1e293b;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, #8B5CF6 0%, #6366F1 100%);
-        border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(180deg, #A78BFA 0%, #818CF8 100%);
-    }
-</style>
+<div style="text-align: center; margin-bottom: 20px;">
+    <div style="font-size: 4rem; margin-bottom: 10px;">🔧</div>
+</div>
 """, unsafe_allow_html=True)
 
-st.title("🔍 Phát hiện khiếm khuyết ốc — Live")
+st.title("🔍 SCREW DEFECT DETECTOR")
+
 st.markdown("""
-<div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
-            padding: 15px 20px; border-radius: 12px; border-left: 4px solid #8B5CF6; margin-bottom: 20px;
-            backdrop-filter: blur(10px);">
-    <p style="color: #e2e8f0; margin: 0; font-size: 15px; font-weight: 500;">
-    📹 Webcam thời thực • 🎯 Phát hiện khiếm khuyết • 💾 Tự động lưu • 🔬 AI-Powered
+<div style="background: linear-gradient(135deg, rgba(157, 78, 221, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
+            padding: 20px 30px; border-radius: 16px; border: 1px solid rgba(157, 78, 221, 0.4); 
+            margin-bottom: 30px; backdrop-filter: blur(10px); text-align: center;">
+    <p style="color: #E0E7FF; margin: 0; font-size: 16px; font-weight: 500; line-height: 1.8;">
+    <span class="feature-tag">📹 Real-time Detection</span>
+    <span class="feature-tag">🎯 AI-Powered</span>
+    <span class="feature-tag">💾 Auto Save</span>
+    <span class="feature-tag">🔬 High Accuracy</span>
     </p>
 </div>
 """, unsafe_allow_html=True)
+
 
 # Khởi tạo database
 init_db()
 
 model_path = "best.pt"
+
+# Class names mapping (6 classes từ model mới)
+# 0=ok, 1=manipulated_front, 2=scratch_head, 3=scratch_neck, 4=thread_side, 5=thread_top
+CLASS_NAMES = ["OK", "Manipulated Front", "Scratch Head", "Scratch Neck", "Thread Side", "Thread Top"]
+DEFECT_CLASSES = {1, 2, 3, 4, 5}
 
 # Sidebar settings
 with st.sidebar:
@@ -232,8 +51,14 @@ with st.sidebar:
     
     CONF_THRESHOLD = st.slider(
         "Độ tin cậy",
-        min_value=0.3, max_value=0.95, value=0.65, step=0.01,
-        help="Ngưỡng phát hiện (cao = chặt)"
+        min_value=0.15, max_value=0.95, value=0.30, step=0.01,
+        help="Ngưỡng phát hiện (thấp = nhạy hơn, cao = chặt hơn)"
+    )
+    
+    USE_TTA = st.checkbox(
+        "🔄 Test-Time Augmentation",
+        value=True,
+        help="Xoay ảnh nhiều góc độ để phát hiện chính xác hơn (chậm hơn nhưng tốt hơn)"
     )
     
     AUTO_CAPTURE = st.checkbox(
@@ -241,6 +66,21 @@ with st.sidebar:
         value=True,
         help="Lưu frame khi phát hiện"
     )
+    
+    # Camera selection
+    st.markdown("### 📷 Chọn Camera")
+    CAMERA_OPTIONS = {
+        "Laptop Webcam (0)": 0,
+        "USB Camera (1)": 1,
+        "USB Camera (2)": 2,
+    }
+    selected_camera = st.selectbox(
+        "Camera",
+        options=list(CAMERA_OPTIONS.keys()),
+        index=0,
+        help="Chọn camera để sử dụng"
+    )
+    CAMERA_INDEX = CAMERA_OPTIONS[selected_camera]
     
     st.markdown("---")
 
@@ -262,7 +102,7 @@ os.makedirs(save_dir, exist_ok=True)
 
 @st.cache_resource
 def get_model(path):
-    return load_model(path)
+    return load_model(path, class_names=CLASS_NAMES)
 
 model = get_model(model_path)
 
@@ -302,7 +142,7 @@ if capture:
 
 # Webcam loop
 if st.session_state["running"]:
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(CAMERA_INDEX)
     if not cap.isOpened():
         info_placeholder.error("🚫 Không thể mở webcam. Kiểm tra quyền truy cập và chỉ số camera.")
         st.session_state["running"] = False
@@ -314,13 +154,13 @@ if st.session_state["running"]:
                 info_placeholder.error("⚠️ Không thể đọc khung hình từ webcam.")
                 break
 
-            annotated, boxes, scores, cids = predict_frame(model, frame, conf=CONF_THRESHOLD)
+            annotated, boxes, scores, cids = predict_frame(model, frame, conf=CONF_THRESHOLD, use_tta=USE_TTA)
             frame_placeholder.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB),
                                     channels="RGB", use_container_width=True)
 
             # Hiển thị kết quả nhận diện real-time
-            # Class 0 = OK, Classes 1-3 = defect (manipulated, scratch, thread)
-            defect_detected = any(cid != 0 for cid in cids)
+            # Class 0 = OK, Classes 1-5 = defect types
+            defect_detected = any(cid in DEFECT_CLASSES for cid in cids)
             if defect_detected:
                 result_placeholder.error("❌ Phát hiện khuyết tật ốc!")
             else:
@@ -343,7 +183,7 @@ if st.session_state["running"]:
                 cv2.imwrite(fname, annotated)
                 
                 # Lưu vào database
-                num_defects = sum(1 for cid in cids if cid != 0)  # Count only defects (non-OK classes)
+                num_defects = sum(1 for cid in cids if cid in DEFECT_CLASSES)  # Count only defects
                 save_detection(
                     image_path=fname,
                     defect_detected=defect_detected,
@@ -408,7 +248,7 @@ if uploaded_files and not st.session_state["running"]:
                 
                 if img is not None:
                     # Nhận diện
-                    annotated, boxes, scores, cids = predict_frame(model, img, conf=CONF_THRESHOLD)
+                    annotated, boxes, scores, cids = predict_frame(model, img, conf=CONF_THRESHOLD, use_tta=USE_TTA)
                     
                     # Hiển thị ảnh đã annotate
                     st.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), 
@@ -418,7 +258,25 @@ if uploaded_files and not st.session_state["running"]:
                     # Kết quả và nút xóa
                     result_col, delete_col = st.columns([2, 1])
                     
-                    defect_detected = any(cid != 0 for cid in cids)
+                    defect_detected = any(cid in DEFECT_CLASSES for cid in cids)
+                    
+                    # Lưu ảnh vào thư mục outputs
+                    timestamp = int(time.time() * 1000)
+                    safe_name = uploaded_file.name.replace(" ", "_")
+                    fname = os.path.join(save_dir, f"upload_{timestamp}_{safe_name}")
+                    cv2.imwrite(fname, annotated)
+                    
+                    # Lưu vào database
+                    num_defects = sum(1 for cid in cids if cid in DEFECT_CLASSES)
+                    save_detection(
+                        image_path=fname,
+                        defect_detected=defect_detected,
+                        num_defects=num_defects,
+                        confidence_scores=scores,
+                        class_ids=cids,
+                        boxes=boxes
+                    )
+                    
                     with result_col:
                         if defect_detected:
                             st.error("❌ Lỗi")

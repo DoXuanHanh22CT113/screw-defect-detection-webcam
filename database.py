@@ -132,3 +132,10 @@ def delete_old_detections(days=7):
             except (ValueError, TypeError):
                 # Bỏ qua các bản ghi có timestamp không hợp lệ
                 pass
+
+def delete_detection(detection_id):
+    """Xóa một detection cụ thể theo ID"""
+    init_firebase()
+    
+    ref = db.reference('detections')
+    ref.child(detection_id).delete()
