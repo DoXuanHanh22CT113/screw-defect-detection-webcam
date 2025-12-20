@@ -19,17 +19,17 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-st.title("🔍 SCREW DEFECT DETECTOR")
+st.title("🔍 PHÁT HIỆN KHIẾM KHUYẾT ỐC VÍT")
 
 st.markdown("""
 <div style="background: linear-gradient(135deg, rgba(157, 78, 221, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
             padding: 20px 30px; border-radius: 16px; border: 1px solid rgba(157, 78, 221, 0.4); 
             margin-bottom: 30px; backdrop-filter: blur(10px); text-align: center;">
     <p style="color: #E0E7FF; margin: 0; font-size: 16px; font-weight: 500; line-height: 1.8;">
-    <span class="feature-tag">📹 Real-time Detection</span>
-    <span class="feature-tag">🎯 AI-Powered</span>
-    <span class="feature-tag">💾 Auto Save</span>
-    <span class="feature-tag">🔬 High Accuracy</span>
+    <span class="feature-tag">📹 Phát hiện thời gian thực</span>
+    <span class="feature-tag">🎯 Hỗ trợ AI</span>
+    <span class="feature-tag">💾 Tự động lưu</span>
+    <span class="feature-tag">🔬 Độ chính xác cao</span>
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -56,7 +56,7 @@ with st.sidebar:
     )
     
     USE_TTA = st.checkbox(
-        "🔄 Test-Time Augmentation",
+        "🔄 Tăng cường thời gian kiểm tra",
         value=True,
         help="Xoay ảnh nhiều góc độ để phát hiện chính xác hơn (chậm hơn nhưng tốt hơn)"
     )
