@@ -12,23 +12,32 @@ st.set_page_config(page_title="Phát hiện khiếm khuyết ốc - Webcam", lay
 # Apply premium theme
 apply_premium_theme()
 
-# Enhanced Header with Icon
+# Enhanced Header with Animated Icon
 st.markdown("""
-<div style="text-align: center; margin-bottom: 20px;">
-    <div style="font-size: 4rem; margin-bottom: 10px;">🔧</div>
+<div style="text-align: center; margin-bottom: 15px;">
+    <div class="header-icon" style="font-size: 5rem; animation: iconFloat 3s ease-in-out infinite;">🔧</div>
 </div>
+<style>
+@keyframes iconFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-8px) rotate(-3deg); }
+    50% { transform: translateY(-12px) rotate(0deg); }
+    75% { transform: translateY(-8px) rotate(3deg); }
+}
+</style>
 """, unsafe_allow_html=True)
 
 st.title("🔍 PHÁT HIỆN KHIẾM KHUYẾT ỐC VÍT")
 
 st.markdown("""
-<div style="background: linear-gradient(135deg, rgba(157, 78, 221, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
-            padding: 20px 30px; border-radius: 16px; border: 1px solid rgba(157, 78, 221, 0.4); 
-            margin-bottom: 30px; backdrop-filter: blur(10px); text-align: center;">
-    <p style="color: #E0E7FF; margin: 0; font-size: 16px; font-weight: 500; line-height: 1.8;">
+<div style="background: linear-gradient(135deg, rgba(157, 78, 221, 0.12) 0%, rgba(0, 212, 255, 0.08) 50%, rgba(0, 245, 160, 0.05) 100%);
+            padding: 25px 35px; border-radius: 24px; border: 1px solid rgba(157, 78, 221, 0.35); 
+            margin-bottom: 35px; backdrop-filter: blur(20px); text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);">
+    <p style="color: #E0E7FF; margin: 0; font-size: 15px; font-weight: 500; line-height: 2.2;">
     <span class="feature-tag">📹 Phát hiện thời gian thực</span>
-    <span class="feature-tag">🎯 Hỗ trợ AI</span>
-    <span class="feature-tag">💾 Tự động lưu</span>
+    <span class="feature-tag">🎯 Hỗ trợ AI YOLOv8</span>
+    <span class="feature-tag">💾 Tự động lưu Firebase</span>
     <span class="feature-tag">🔬 Độ chính xác cao</span>
     </p>
 </div>
@@ -51,7 +60,7 @@ with st.sidebar:
     
     CONF_THRESHOLD = st.slider(
         "Độ tin cậy",
-        min_value=0.15, max_value=0.95, value=0.35, step=0.01,
+        min_value=0.10, max_value=0.95, value=0.30, step=0.01,
         help="Ngưỡng phát hiện (thấp = nhạy hơn, cao = chặt hơn)"
     )
     
@@ -328,6 +337,15 @@ with st.sidebar:
         
         if total > 0:
             defect_rate = (defect_count / total * 100)
-            st.markdown(f"<div style='text-align: center; color: #1a1a1a; margin-top: 8px;'><b>Tỉ lệ:</b> <span style='color: #FF1744; font-size: 18px;'>{defect_rate:.1f}%</span></div>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div style='text-align: center; margin-top: 15px; padding: 12px; 
+                        background: linear-gradient(135deg, rgba(255, 71, 87, 0.15), rgba(255, 71, 87, 0.05));
+                        border-radius: 12px; border: 1px solid rgba(255, 71, 87, 0.3);'>
+                <span style='color: #9CA3AF; font-size: 13px;'>TỈ LỆ LỖI</span><br>
+                <span style='color: #FF4757; font-size: 28px; font-weight: 900; 
+                             font-family: Orbitron, sans-serif;
+                             text-shadow: 0 0 20px rgba(255, 71, 87, 0.5);'>{defect_rate:.1f}%</span>
+            </div>
+            """, unsafe_allow_html=True)
     else:
         st.info("💭 Chưa có dữ liệu")
