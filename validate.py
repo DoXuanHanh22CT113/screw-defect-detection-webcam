@@ -1,62 +1,117 @@
 """
-Validation logic to keep YOLO detections that look like screws/defects.
+=============================================================================
+FILE: validate.py
+=============================================================================
+MÔ TẢ:
+    Module validation để lọc các detections không hợp lệ.
+    
+MỤC ĐÍCH:
+    - Loại bỏ các bounding boxes quá nhỏ, quá lớn, hoặc có tỉ lệ bất thường
+    - Điều chỉnh ngưỡng confidence theo từng class
+    - Giảm false positive (nhận nhầm ốc tốt thành lỗi)
+    - Giảm false negative (bỏ sót ốc lỗi)
 
-Được tinh chỉnh để giảm false-positive nhưng vẫn giữ lại lỗi thật.
+LOGIC CHÍNH:
+    1. Kiểm tra confidence score có đủ cao không
+    2. Kiểm tra kích thước box (diện tích, chiều rộng, chiều cao)
+    3. Kiểm tra tỉ lệ aspect ratio (width/height)
+    4. Kiểm tra vị trí (không quá sát mép ảnh)
+    
+THAM SỐ QUAN TRỌNG:
+    - CLASS_CONFIDENCE_OFFSET: Điều chỉnh ngưỡng theo class
+    - DEFAULT_RULES: Quy tắc mặc định cho mọi class
+    - CLASS_RULE_OVERRIDES: Quy tắc riêng cho từng class
+=============================================================================
 """
 
 from __future__ import annotations
 
 from typing import Dict, List, Sequence, Tuple, Union
 
-# ---- Configuration -------------------------------------------------------
+# ============================================================================
+# CẤU HÌNH CÁC QUY TẮC VALIDATION
+# ============================================================================
 
-# Các rule mặc định áp dụng cho mọi lớp (OK & defect)
-# === THAM SỐ TỐI ƯU CHO PHÁT HIỆN DEFECT ===
-# Các rule mặc định đã được tinh chỉnh kỹ lưỡng
+# Quy tắc mặc định áp dụng cho mọi lớp (OK & defect)
+# Các giá trị đã được tinh chỉnh để cân bằng giữa detection và false positive
 DEFAULT_RULES: Dict[str, Union[float, Tuple[float, float]]] = {
-    "min_area_ratio": 0.0002,   # >= 0.02% diện tích frame (~60px² với 640x480)
-    "max_area_ratio": 0.80,     # Cho phép box lớn (vít gần camera)
-    "min_width_ratio": 0.015,   # >= 1.5% chiều ngang frame
-    "min_height_ratio": 0.015,  # >= 1.5% chiều cao frame
-    "aspect_ratio": (0.08, 15.0),  # Nới lỏng aspect ratio
-    "edge_buffer_ratio": 0.005,  # Tâm box cách mép >=0.5%
+    # Diện tích tối thiểu >= 0.02% diện tích frame (~60px² với 640x480)
+    "min_area_ratio": 0.0002,
+    
+    # Diện tích tối đa <= 80% frame (cho phép box lớn khi vít gần camera)
+    "max_area_ratio": 0.80,
+    
+    # Chiều rộng tối thiểu >= 1.5% chiều ngang frame
+    "min_width_ratio": 0.015,
+    
+    # Chiều cao tối thiểu >= 1.5% chiều cao frame
+    "min_height_ratio": 0.015,
+    
+    # Tỉ lệ aspect ratio (width/height) phải nằm trong khoảng [0.08, 15.0]
+    # Nới lỏng để chấp nhận ốc nằm ngang hoặc đứng
+    "aspect_ratio": (0.08, 15.0),
+    
+    # Tâm box phải cách mép frame ít nhất 0.5%
+    # Tránh detect các object bị cắt mất ở mép
+    "edge_buffer_ratio": 0.005,
 }
 
-# Rule riêng theo class (6 classes từ best.pt)
-# 0=ok, 1=manipulated_front, 2-5=various defects (scratch_head, scratch_neck, thread_side, thread_top)
+# ============================================================================
+# QUY TẮC RIÊNG THEO CLASS (6 classes từ best.pt)
+# ============================================================================
+# 0=ok, 1=manipulated_front, 2=scratch_head, 3=scratch_neck, 4=thread_side, 5=thread_top
 CLASS_RULE_OVERRIDES: Dict[int, Dict[str, Union[float, Tuple[float, float]]]] = {
-    0: {  # OK → yêu cầu box khá lớn để chắc chắn là vít hoàn chỉnh
-        "min_area_ratio": 0.001,
+    # Class 0: OK - ốc bình thường
+    # Yêu cầu box khá lớn để chắc chắn là vít hoàn chỉnh
+    0: {
+        "min_area_ratio": 0.001,     # Lớn hơn defect vì ốc OK thường rõ ràng hơn
         "max_area_ratio": 0.85,
-        "aspect_ratio": (0.1, 10.0),
+        "aspect_ratio": (0.1, 10.0), # Chặt hơn một chút
     },
-    1: {  # manipulated_front → vít bị biến dạng mặt trước - NỚI LỎNG
+    
+    # Class 1: Manipulated Front - vít bị biến dạng mặt trước
+    # Nới lỏng vì defect có thể nhỏ và khó phát hiện
+    1: {
         "min_area_ratio": 0.0001,
         "max_area_ratio": 0.85,
-        "aspect_ratio": (0.03, 30.0),
+        "aspect_ratio": (0.03, 30.0),  # Rất lỏng
     },
-    # Classes 2-5 (scratch_head, scratch_neck, thread_side, thread_top) share same relaxed rules
+    
+    # Classes 2-5: Các loại scratch và thread defects
+    # Chia sẻ cùng một bộ quy tắc lỏng
+    # scratch_head, scratch_neck, thread_side, thread_top
     **{class_id: {
-        "min_area_ratio": 0.00005,
+        "min_area_ratio": 0.00005,   # Rất nhỏ vì vết xước có thể rất nhỏ
         "max_area_ratio": 0.85,
-        "aspect_ratio": (0.02, 50.0),
+        "aspect_ratio": (0.02, 50.0),  # Rất lỏng
     } for class_id in [2, 3, 4, 5]}
 }
 
-# Điều chỉnh confidence theo class.
-# Offset DƯƠNG = yêu cầu cao hơn, Offset ÂM = dễ phát hiện hơn
-# ƯU TIÊN PHÁT HIỆN DEFECT: Ngưỡng defect THẤP, ngưỡng OK CAO
+# ============================================================================
+# ĐIỀU CHỈNH CONFIDENCE THEO CLASS
+# ============================================================================
+# Offset DƯƠNG (+) = yêu cầu cao hơn (khó phát hiện hơn)
+# Offset ÂM (-) = yêu cầu thấp hơn (dễ phát hiện hơn)
+#
+# CHIẾN LƯỢC: CÂN BẰNG
+# - OK (+0.10): Yêu cầu cao hơn để tránh nhận nhầm defect thành OK
+# - Defect (-0.05): Giảm nhẹ để không bỏ sót defect
+#
+# VÍ DỤ với ngưỡng base = 0.35:
+# - OK sẽ cần score >= 0.45 (0.35 + 0.10)
+# - Defect chỉ cần score >= 0.30 (0.35 - 0.05)
 CLASS_CONFIDENCE_OFFSET: Dict[int, float] = {
-    0: +0.25,   # OK → yêu cầu RẤT CAO để tránh nhận nhầm vít lỗi thành OK
-    1: -0.25,   # manipulated_front - giảm nhiều để dễ phát hiện
-    2: -0.25,   # scratch_head - giảm nhiều (khó detect)
-    3: -0.25,   # scratch_neck - giảm nhiều (khó detect)
-    4: -0.25,   # thread_side - giảm nhiều (khó detect)
-    5: -0.25,   # thread_top - giảm nhiều (khó detect)
+    0: +0.10,   # OK → yêu cầu cao hơn một chút để tăng độ tin cậy
+    1: -0.05,   # manipulated_front - giảm nhẹ để phát hiện được
+    2: -0.05,   # scratch_head - giảm nhẹ
+    3: -0.05,   # scratch_neck - giảm nhẹ
+    4: -0.05,   # thread_side - giảm nhẹ
+    5: -0.05,   # thread_top - giảm nhẹ
 }
 
-CONFIDENCE_MIN = 0.02   # Rất thấp để bắt được defect
-CONFIDENCE_MAX = 0.97
+# Giới hạn an toàn cho confidence
+CONFIDENCE_MIN = 0.10   # Tối thiểu 10% - lọc bớt detections quá yếu
+CONFIDENCE_MAX = 0.97   # Tối đa 97%
 
 # -------------------------------------------------------------------------
 
@@ -64,8 +119,28 @@ BoxType = Sequence[Union[int, float]]
 FrameShape = Sequence[int]
 
 
+# ============================================================================
+# CÁC HÀM HELPER
+# ============================================================================
+
 def _resolve_rules(class_id: int) -> Dict[str, Union[float, Tuple[float, float]]]:
-    """Gộp rule mặc định & rule riêng theo class."""
+    """
+    Gộp rule mặc định với rule riêng của class.
+    
+    Logic:
+    1. Bắt đầu với DEFAULT_RULES (quy tắc chung)
+    2. Nếu class có rule riêng trong CLASS_RULE_OVERRIDES, ghi đè lên
+    
+    Ví dụ:
+    - Class 0 (OK) sẽ dùng min_area_ratio=0.001 (từ CLASS_RULE_OVERRIDES)
+      thay vì 0.0002 (từ DEFAULT_RULES)
+    
+    Args:
+        class_id: ID của class (0-5)
+    
+    Returns:
+        Dict chứa tất cả rules cho class đó
+    """
     rules = dict(DEFAULT_RULES)
     overrides = CLASS_RULE_OVERRIDES.get(class_id)
     if overrides:
@@ -74,26 +149,63 @@ def _resolve_rules(class_id: int) -> Dict[str, Union[float, Tuple[float, float]]
 
 
 def _effective_conf_threshold(base_conf: float, class_id: int) -> float:
-    """Cộng offset theo class rồi ép trong khoảng an toàn."""
+    """
+    Tính ngưỡng confidence thực tế cho một class.
+    
+    Công thức: effective_threshold = base_conf + CLASS_CONFIDENCE_OFFSET[class_id]
+    Kết quả được giới hạn trong [CONFIDENCE_MIN, CONFIDENCE_MAX]
+    
+    Ví dụ với base_conf = 0.35:
+    - Class 0 (OK):     0.35 + 0.10 = 0.45 (yêu cầu cao hơn)
+    - Class 1 (defect): 0.35 - 0.05 = 0.30 (dễ phát hiện hơn)
+    
+    Args:
+        base_conf: Ngưỡng confidence cơ sở (được set bởi user qua slider)
+        class_id: ID của class
+    
+    Returns:
+        Ngưỡng confidence đã điều chỉnh
+    """
     offset = CLASS_CONFIDENCE_OFFSET.get(class_id, 0.0)
     adjusted = base_conf + offset
     return max(CONFIDENCE_MIN, min(CONFIDENCE_MAX, adjusted))
 
 
 def _clip_box_to_frame(box: BoxType, frame_w: int, frame_h: int) -> Tuple[float, float, float, float]:
-    """Đảm bảo toạ độ nằm trong frame và x1 < x2, y1 < y2."""
+    """
+    Đảm bảo tọa độ box nằm trong frame và hợp lệ.
+    
+    Xử lý:
+    1. Clip tọa độ vào trong giới hạn frame (không âm, không vượt frame)
+    2. Đảm bảo x1 < x2 và y1 < y2 (hoán đổi nếu cần)
+    
+    Args:
+        box: Bounding box [x1, y1, x2, y2]
+        frame_w, frame_h: Kích thước frame
+    
+    Returns:
+        (x1, y1, x2, y2) đã được clip và chuẩn hóa
+    """
     x1, y1, x2, y2 = (float(box[i]) for i in range(4))
+    
+    # Clip vào giới hạn frame
     x1 = max(0.0, min(x1, frame_w - 1.0))
     x2 = max(0.0, min(x2, frame_w - 1.0))
     y1 = max(0.0, min(y1, frame_h - 1.0))
     y2 = max(0.0, min(y2, frame_h - 1.0))
+    
+    # Đảm bảo x1 < x2, y1 < y2
     if x1 > x2:
         x1, x2 = x2, x1
     if y1 > y2:
         y1, y2 = y2, y1
+    
     return x1, y1, x2, y2
 
 
+# ============================================================================
+# HÀM KIỂM TRA DETECTION HỢP LỆ
+# ============================================================================
 def is_valid_detection(
     box: BoxType,
     frame_shape: FrameShape,
@@ -104,7 +216,27 @@ def is_valid_detection(
     debug: bool = False,
     class_id: Union[int, None] = None,
 ) -> Tuple[bool, Union[str, Dict[str, float]]]:
-    """Kiểm tra hình học của bounding box."""
+    """
+    Kiểm tra hình học của bounding box có hợp lệ không.
+    
+    CÁC KIỂM TRA:
+    1. Diện tích: không quá nhỏ (noise) và không quá lớn (full frame)
+    2. Chiều rộng/cao tối thiểu: box phải đủ lớn để thấy rõ
+    3. Aspect ratio: tỉ lệ width/height trong khoảng hợp lý
+    4. Vị trí: tâm box không quá sát mép ảnh
+    
+    Args:
+        box: Bounding box [x1, y1, x2, y2]
+        frame_shape: Kích thước frame (height, width, ...)
+        rules: Các quy tắc kiểm tra (từ _resolve_rules)
+        min_area: Diện tích tối thiểu (pixels)
+        max_area_ratio: Tỉ lệ diện tích tối đa so với frame
+        debug: In thông tin debug
+        class_id: ID của class (để đưa vào kết quả)
+    
+    Returns:
+        (is_valid, details): True nếu hợp lệ, kèm thông tin chi tiết
+    """
     if len(box) < 4:
         return False, "box length < 4"
 
@@ -167,6 +299,7 @@ def is_valid_detection(
         if not (x_buffer <= cx <= frame_w - x_buffer and y_buffer <= cy <= frame_h - y_buffer):
             return False, "center too close to frame edge"
 
+    # Box hợp lệ - trả về True và thông tin chi tiết
     return True, {
         "area": area,
         "area_ratio": area_ratio,
@@ -177,6 +310,9 @@ def is_valid_detection(
     }
 
 
+# ============================================================================
+# HÀM LỌC DETECTIONS CHÍNH
+# ============================================================================
 def filter_detections(
     boxes: Sequence[BoxType],
     scores: Sequence[float],
@@ -187,7 +323,34 @@ def filter_detections(
     max_area_ratio: float = 0.99,
     debug: bool = False,
 ) -> Tuple[List[BoxType], List[float], List[int]]:
-    """Lọc detections dựa trên confidence và hình học."""
+    """
+    Lọc các detections không hợp lệ, giữ lại các detection tốt.
+    
+    LUỒNG XỬ LÝ CHO MỖI DETECTION:
+    1. Kiểm tra confidence:
+       - Tính ngưỡng thực tế theo class (_effective_conf_threshold)
+       - Nếu score < ngưỡng → LOẠI
+    
+    2. Kiểm tra hình học:
+       - Lấy rules của class (đã merge với DEFAULT_RULES)
+       - Kiểm tra diện tích, aspect ratio, vị trí
+       - Nếu không hợp lệ → LOẠI
+    
+    3. Nếu pass cả 2 bước → GIỮ LẠI
+    
+    Args:
+        boxes: Danh sách các bounding boxes
+        scores: Danh sách confidence scores tương ứng
+        class_ids: Danh sách class IDs tương ứng
+        frame_shape: Kích thước frame
+        min_conf: Ngưỡng confidence cơ sở
+        min_area: Diện tích tối thiểu
+        max_area_ratio: Tỉ lệ diện tích tối đa
+        debug: In thông tin debug
+    
+    Returns:
+        (filtered_boxes, filtered_scores, filtered_class_ids)
+    """
     filtered_boxes: List[BoxType] = []
     filtered_scores: List[float] = []
     filtered_class_ids: List[int] = []

@@ -51,7 +51,7 @@ with st.sidebar:
     
     CONF_THRESHOLD = st.slider(
         "Độ tin cậy",
-        min_value=0.15, max_value=0.95, value=0.30, step=0.01,
+        min_value=0.15, max_value=0.95, value=0.35, step=0.01,
         help="Ngưỡng phát hiện (thấp = nhạy hơn, cao = chặt hơn)"
     )
     
